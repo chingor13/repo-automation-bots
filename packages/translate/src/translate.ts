@@ -18,9 +18,12 @@ import { Application, Context } from 'probot';
 import { Translate } from '@google-cloud/translate';
 
 const CONFIGURATION_FILE_PATH = 'translate.yml';
+const DEFAULT_LANGUAGE = 'en';
+const DEFAULT_THRESHOLD = 0.8;
 
 interface Configuration {
   repoLanguageCode?: string;
+  threshold?: number;
 }
 
 export = (app: Application) => {
@@ -29,29 +32,40 @@ export = (app: Application) => {
       CONFIGURATION_FILE_PATH,
       {}
     )) as Configuration;
-    const repoLanguageCode = config.repoLanguageCode || 'en';
+    const repoLanguageCode = config.repoLanguageCode || DEFAULT_LANGUAGE;
+    const threshold = config.threshold || DEFAULT_THRESHOLD;
 
     const translate = new Translate();
-    const [translatedTitle] = await translate.translate(
-      context.payload.issue.title,
+    const title = context.payload.issue.title;
+    const body = context.payload.issue.body;
+
+    // ignore if no need for translation -or- we are not confident
+    // in the source language
+    const [detectResult] = await translate.detect(title + "\n" + body);
+    if (detectResult.language === repoLanguageCode || detectResult.confidence < threshold) {
+      return;
+    }
+
+    // make a single request to translate the title and the body
+    const [[translatedTitle, translatedBody]] = await translate.translate(
+      [title, body],
       repoLanguageCode
     );
-    const [translatedBody] = await translate.translate(
-      context.payload.issue.body,
-      repoLanguageCode
-    );
 
-    await context.github.issues.createComment(
-      context.repo({
-        issue_number: context.payload.issue.number,
-        body: `Translated title:
+    await context.github.issues.update(context.repo({
+      issue_number: context.payload.issue.number,
+      title: translatedTitle,
+      body: `
+Translated from ${detectResult.language} (confidence: ${detectResult.confidence}):
 
-${translatedTitle}.
+<details><summary>Original Title</summary>
+${title}</details>
 
-Translated body:
+<details><summary>Original Body</summary>
+${body}</details>
 
-${translatedBody}`,
-      })
-    );
+${translatedBody}
+`
+    }));
   });
 };
