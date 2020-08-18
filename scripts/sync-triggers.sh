@@ -33,8 +33,8 @@ region=$5
 schedulerServiceAccountEmail=$6
 
 # change this configuration for testing
-branch="master"
-repoOwner="googleapis"
+branch="id-test"
+repoOwner="chingor13"
 repoName="repo-automation-bots"
 
 # propagate substitution variables to deploy triggers
