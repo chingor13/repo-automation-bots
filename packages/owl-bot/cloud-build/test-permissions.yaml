@@ -1,0 +1,24 @@
+steps:
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'generate-token-and-get-digest'
+    script: |
+      #!/bin/sh
+      set -e
+      gcloud secrets versions access latest --secret=not-a-real-secret
+
+  # Install credentials *after* running the container.
+  - name: bash
+    script: |
+      #!/usr/bin/env bash
+      echo "Secrets: ${OWLBOT_SECRETS}"
+    secretEnv: ['OWLBOT_SECRETS']
+
+
+# allow 180 minutes (3 hours) for the post-processor image to run
+timeout: '10800s'
+# logsBucket: 'gs://repo-automation-bots-post-processor-logs'
+
+availableSecrets:
+  secretManager:
+  - versionName: project/chingor-test/secrets/not-a-real-secret/versions/latest
+    env: 'OWLBOT_SECRETS'
