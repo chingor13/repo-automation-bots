@@ -20,5 +20,5 @@ timeout: '10800s'
 
 availableSecrets:
   secretManager:
-  - versionName: project/chingor-test/secrets/not-a-real-secret/versions/latest
+  - versionName: projects/chingor-test/secrets/not-a-real-secret/versions/latest
     env: 'OWLBOT_SECRETS'
